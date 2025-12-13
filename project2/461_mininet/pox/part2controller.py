@@ -24,6 +24,27 @@ class Firewall(object):
         connection.addListeners(self)
 
         # add switch rules here
+        # Rule 1: Allow ARP (flood)
+        packet = of.ofp_flow_mod()
+        packet.priority = 100
+        packet.match.dl_type = 0x0806  # ARP
+        packet.actions.append(of.ofp_action_output(port=of.OFPP_FLOOD))
+        connection.send(packet)
+
+        # Rule 2: Allow ICMP over IPv4 (flood)
+        packet = of.ofp_flow_mod()
+        packet.priority = 90
+        packet.match.dl_type = 0x0800  # IPv4
+        packet.match.nw_proto = 1      # ICMP
+        packet.actions.append(of.ofp_action_output(port=of.OFPP_FLOOD))
+        connection.send(packet)
+
+        # Rule 3: Drop all other IPv4
+        packet = of.ofp_flow_mod()
+        packet.priority = 10
+        packet.match.dl_type = 0x0800  
+        packet.actions = []  
+        connection.send(packet)
 
     def _handle_PacketIn(self, event):
         """
