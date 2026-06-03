@@ -37,19 +37,19 @@ The **core switch (`cores21`)** acts as an L3 router — the focal point of all 
 project2/
 ├── part1/
 │   ├── part1.py              # Custom Mininet topology (1 switch, 4 hosts)
-│   └── screenshots/          # iperf, dump, pingall outputs
+│  
 │
 ├── part2/
 │   ├── part2controller.py    # L2 static firewall (ICMP/ARP allow, drop rest)
-│   └── screenshots/
+│ 
 │
 ├── part3/
 │   ├── part3controller.py    # Multi-switch L3 routing + security policies
-│   └── screenshots/
+│  
 │
 └── part4/
     ├── part4controller.py    # Dynamic L3 router with ARP learning
-    └── screenshots/
+   
 ```
 
 ---
@@ -81,6 +81,7 @@ sudo python ~/461_mininet/topos/part2.py
 ---
 
 ## 📋 Implementation Details
+### Detailed Findings in the Report
 
 ### Part 1 — Mininet Topology
 Built a custom 4-host, 1-switch star topology using Mininet's Python API. Verified connectivity with `pingall`, measured throughput with `iperf`, and inspected the network state with `dump`.
