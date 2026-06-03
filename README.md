@@ -1,167 +1,177 @@
 # 🌐 SDN Network Implementation — CSE 461 Project 2
 
 > **Software-Defined Networking with OpenFlow, Mininet & POX Controller**  
-> University of Washington · CSE 461: Computer Networks · Spring 2025
+> University of Washington · CSE 461: Computer Networks · Spring 2025  
+> Team: **linhnph05** · **MMTNC**
 
 ---
 
 ## 📌 Overview
 
-This project implements a full Software-Defined Networking (SDN) stack using the **OpenFlow protocol**, progressing from basic network emulation to a dynamic L3 router with ARP learning. Built on **Mininet** (network emulator) and **POX** (OpenFlow controller), the project demonstrates how decoupling the control plane from the data plane enables programmable, policy-driven networks.
+This project implements a full **Software-Defined Networking (SDN)** stack using the OpenFlow protocol — progressing from basic network emulation to a dynamic L3 router with ARP learning. Built on **Mininet** (network emulator) and **POX** (OpenFlow controller), it demonstrates how decoupling the control plane from the data plane enables programmable, policy-driven networks.
 
-**Key concepts demonstrated:**
-- L2 switching & L3 routing via flow table rules
-- Stateful ARP handling and dynamic route learning
-- Fine-grained traffic filtering (firewall policies)
-- Multi-switch topology management with a centralized controller
-
----
-
-## 🏗️ Architecture
-
-```
-[h10 @ 10.0.1.10]──{s1}──\
-[h20 @ 10.0.2.20]──{s2}──{cores21}──{dcs31}──[serv1 @ 10.0.4.10]
-[h30 @ 10.0.3.30]──{s3}──/    │
-                               │
-                [hnotrust1 @ 172.16.10.100]
-```
-
-The **core switch (`cores21`)** acts as an L3 router — the focal point of all inter-subnet traffic. Edge switches (`s1`, `s2`, `s3`, `dcs31`) handle L2 forwarding within subnets.
+**Core skills demonstrated:**
+- Designing and emulating custom network topologies in Mininet
+- Writing OpenFlow controllers in Python (POX) to manage flow tables
+- Implementing L2 firewalls and L3 routing with fine-grained traffic policies
+- Building a dynamic ARP-learning router without static route configuration
 
 ---
 
-## 🔧 Project Structure
+## 🗂️ Repository Structure
 
 ```
-project2/
-├── part1/
-│   ├── part1.py              # Custom Mininet topology (1 switch, 4 hosts)
-│  
+project2-MMTNC/
 │
-├── part2/
-│   ├── part2controller.py    # L2 static firewall (ICMP/ARP allow, drop rest)
-│ 
+├── 461_mininet/
+│   ├── topos/
+│   │   ├── part1.py          # Custom 4-host, 1-switch star topology
+│   │   ├── part2.py          # Provided — single switch + firewall topology
+│   │   ├── part3.py          # Provided — multi-floor company network
+│   │   └── part4.py          # Provided — routed network (no static ARP)
+│   │
+│   └── pox/
+│       ├── part2controller.py  # L2 static firewall
+│       ├── part3controller.py  # Multi-switch L3 router + security policies
+│       └── part4controller.py  # Dynamic L3 router with ARP learning
 │
-├── part3/
-│   ├── part3controller.py    # Multi-switch L3 routing + security policies
-│  
-│
-└── part4/
-    ├── part4controller.py    # Dynamic L3 router with ARP learning
-   
+└── README.md
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🏗️ Network Architecture
+
+### Parts 1–2: Simple Topology
+```
+[h1]─────{s1}─────[h2]
+[h3]────/    \────[h4]
+```
+
+### Parts 3–4: Company Network
+```
+[h10 @ 10.0.1.10/24] ──{s1}──\
+[h20 @ 10.0.2.20/24] ──{s2}──{cores21}──{dcs31}──[serv1 @ 10.0.4.10/24]
+[h30 @ 10.0.3.30/24] ──{s3}──/    │
+                                   │
+                    [hnotrust1 @ 172.16.10.100/24]
+```
+
+The **core switch (`cores21`)** acts as an L3 router — all inter-subnet traffic flows through it. Edge switches (`s1`, `s2`, `s3`, `dcs31`) flood within their subnets.
+
+---
+
+## 🚀 Running the Project
 
 ### Prerequisites
+- [Multipass](https://multipass.run/) with the CSE 461 Ubuntu VM
+- Mininet and POX pre-installed in the VM
 
-- [Multipass](https://multipass.run/) — VM management
-- Ubuntu VM with **Mininet** and **POX** pre-installed
-
-### Setup
-
+### Part 1 — Mininet Topology
 ```bash
-# Launch VM
-multipass shell cse461
-
-# Run Part 1 topology
 sudo -E mn --custom 461_mininet/topos/part1.py --topo=part1
+```
 
-# Run Parts 2–4 (in separate terminals)
-# Terminal 1: Start POX controller
-sudo ~/pox/pox.py misc.part2controller
+### Parts 2–4 — POX Controller + Mininet (run in separate terminals)
+```bash
+# Terminal 1: launch the POX controller
+sudo ~/pox/pox.py misc.part2controller   # swap part number as needed
 
-# Terminal 2: Start Mininet
-sudo python ~/461_mininet/topos/part2.py
+# Terminal 2: launch Mininet
+sudo python 461_mininet/topos/part2.py
 ```
 
 ---
 
-## 📋 Implementation Details
-### Detailed Findings in the Report
+## 📋 Implementation
 
-### Part 1 — Mininet Topology
-Built a custom 4-host, 1-switch star topology using Mininet's Python API. Verified connectivity with `pingall`, measured throughput with `iperf`, and inspected the network state with `dump`.
+### Part 1 — Custom Mininet Topology
+Built a 4-host, 1-switch star topology using Mininet's Python API. Verified with `pingall`, measured throughput with `iperf`, and inspected state with `dump`.
 
-### Part 2 — L2 Firewall (POX Controller)
+---
 
-Implemented a stateless packet filter on a single switch using OpenFlow flow rules:
+### Part 2 — L2 Static Firewall (`part2controller.py`)
 
-| Src IP     | Dst IP     | Protocol | Action  |
-|------------|------------|----------|---------|
-| any IPv4   | any IPv4   | ICMP     | ✅ Allow |
-| any        | any        | ARP      | ✅ Allow |
-| any IPv4   | any IPv4   | —        | ❌ Drop  |
+Installed flow rules at startup so the switch handles traffic autonomously — **no per-packet controller involvement**.
 
-Rules are installed as **flow table entries** at startup (not per-packet), ensuring the switch handles traffic autonomously without controller involvement on every packet.
+| Src IP   | Dst IP   | Protocol | Action   |
+|----------|----------|----------|----------|
+| any IPv4 | any IPv4 | ICMP     | ✅ Allow |
+| any      | any      | ARP      | ✅ Allow |
+| any IPv4 | any IPv4 | —        | ❌ Drop  |
 
-### Part 3 — Multi-Switch L3 Router
+Result: `pingall` succeeds within subnets; `iperf` (TCP/UDP) is blocked.
 
-Extended the controller to manage a 5-switch topology with inter-subnet routing. Key design decisions:
+---
 
-- **Edge switches** (`s1`, `s2`, `s3`, `dcs31`): flood within subnet
-- **Core switch** (`cores21`): strict per-port forwarding rules based on destination IP
-- **Security policy** enforced at `cores21`:
-  - `hnotrust1` → `serv1`: **all IP blocked**
-  - `hnotrust1` → internal hosts: **ICMP blocked**, IP allowed
+### Part 3 — Multi-Switch L3 Router (`part3controller.py`)
 
-### Part 4 — Dynamic L3 Router with ARP Learning
+Extended the controller to manage 5 switches with inter-subnet routing:
 
-Transformed `cores21` into a fully functional L3 router:
+- **Edge switches** (`s1`, `s2`, `s3`, `dcs31`): flood within subnet (`OFPP_FLOOD`)
+- **Core switch** (`cores21`): strict per-port forwarding keyed on destination IP
 
-- **ARP interception**: controller responds to ARP requests on behalf of gateway IPs (`10.0.{N}.1`) without flooding
-- **Dynamic learning**: snoops ARP traffic to build an IP→MAC→port mapping table
-- **Flow rule installation**: once an L3 path is learned, installs forwarding rules directly into `cores21`'s flow table for all future traffic
-- **L2 header rewriting**: rewrites src/dst MAC for cross-subnet forwarding
-- Retains all L3 security policies from Part 3
+Security policy enforced at `cores21`:
 
-> **Why do some pings fail initially in Part 4?**  
-> The router installs flow rules *after* learning the destination via ARP. The first ping triggers ARP resolution and rule installation — subsequent pings use the cached flow rule and succeed.
+| Source        | Destination       | Traffic | Rule      |
+|---------------|-------------------|---------|-----------|
+| `hnotrust1`   | `serv1`           | All IP  | ❌ Block  |
+| `hnotrust1`   | `h10/h20/h30`     | ICMP    | ❌ Block  |
+| `hnotrust1`   | `h10/h20/h30`     | IP      | ✅ Allow  |
+| internal hosts | any              | any     | ✅ Allow  |
+
+---
+
+### Part 4 — Dynamic L3 Router with ARP Learning (`part4controller.py`)
+
+Transformed `cores21` into a fully functional L3 router — **zero static routes at startup**.
+
+**How it works:**
+
+1. **ARP interception** — Controller intercepts ARP requests and replies on behalf of gateway IPs (`10.0.{N}.1`), preventing broadcast flooding across subnets.
+2. **Dynamic learning** — Snoops ARP traffic to build an `IP → MAC → port` mapping table at runtime.
+3. **Flow rule installation** — Once a destination is learned, installs a forwarding rule directly into `cores21`'s flow table. All subsequent traffic to that destination is hardware-switched (no controller involvement).
+4. **L2 header rewriting** — Rewrites src/dst MAC for every cross-subnet hop.
+
+All L3 security policies from Part 3 are preserved.
+
+> **Why do some pings fail initially?**  
+> The first packet to an unknown destination triggers ARP resolution and flow rule installation. Once the route is learned, all subsequent packets hit the flow table directly and succeed.
 
 ---
 
 ## 🔍 Key Technical Concepts
 
-| Concept | Implementation |
+| Concept | Where Applied |
 |---|---|
-| **OpenFlow flow rules** | `of.ofp_flow_mod()` with match/action pairs |
-| **ARP handling** | Controller intercepts, generates synthetic replies |
-| **L2 → L3 routing** | MAC rewrite + port-based forwarding at core switch |
-| **Dynamic learning** | ARP snooping to build IP↔MAC↔port table at runtime |
-| **Firewall policy** | Priority-ordered flow rules; unmatched = drop |
+| `ofp_flow_mod` — install flow rules | Parts 2, 3, 4 |
+| Priority-based rule matching | Part 2 firewall |
+| Per-port IP forwarding (no flood) | Part 3 & 4 `cores21` |
+| ARP generation by controller | Part 4 |
+| IP↔MAC↔port dynamic learning | Part 4 |
+| L2 MAC rewrite for L3 routing | Part 4 |
 
 ---
 
-## 📸 Results
+## ✅ Test Results Summary
 
 | Test | Part 2 | Part 3 | Part 4 |
-|------|--------|--------|--------|
-| `pingall` (internal hosts) | ✅ | ✅ | ✅ |
-| `pingall` (hnotrust → internal) | — | ❌ Blocked | ❌ Blocked |
-| `iperf` (IP traffic) | ❌ Blocked | ✅ (authorized) | ✅ (authorized) |
-| `iperf hnotrust → serv1` | — | ❌ Blocked | ❌ Blocked |
+|------|:------:|:------:|:------:|
+| `pingall` — internal hosts | ✅ | ✅ | ✅ |
+| `pingall` — hnotrust → internal | — | ❌ Blocked | ❌ Blocked |
+| `iperf` — authorized IP traffic | ❌ Blocked | ✅ | ✅ |
+| `iperf` — hnotrust → serv1 | — | ❌ Blocked | ❌ Blocked |
+| `iperf` — hnotrust → h10 (IP) | — | ✅ | ✅ |
 
 ---
 
 ## 🛠️ Technologies
 
-- **Mininet** — Software network emulator
-- **POX** — Python-based OpenFlow controller
-- **OpenVSwitch (OVS)** — Software-defined switch implementation
-- **OpenFlow 1.0** — Controller-switch communication protocol
-- **Multipass** — Lightweight VM for isolated environment
-
----
-
-## 👥 Team
-
-| Name | UW NetID |
-|------|----------|
-| Luong Van Dung| 23127353 |
-| Nguyen Phan Hung Linh | 23127081 |
+- **[Mininet](https://github.com/mininet/mininet)** — Software network emulator
+- **[POX](https://noxrepo.github.io/pox-doc/html/)** — Python OpenFlow controller
+- **OpenVSwitch (OVS)** — Software-defined switch
+- **OpenFlow 1.0** — Controller–switch protocol
+- **Multipass** — Lightweight Ubuntu VM
 
 ---
 
@@ -170,4 +180,4 @@ Transformed `cores21` into a fully functional L3 router:
 - [Mininet Walkthrough](http://mininet.org/walkthrough/)
 - [POX Documentation](https://noxrepo.github.io/pox-doc/html/)
 - [OpenFlow 1.0 Specification](https://opennetworking.org/wp-content/uploads/2013/04/openflow-spec-v1.0.0.pdf)
-- [OpenFlow Tutorial — Learning Switch with POX](https://github.com/mininet/openflow-tutorial/wiki/Create-a-Learning-Switch)
+- [OpenFlow Tutorial — Learning Switch](https://github.com/mininet/openflow-tutorial/wiki/Create-a-Learning-Switch)
